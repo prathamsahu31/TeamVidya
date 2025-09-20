@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Risk Monitoring Dashboard</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --surface-color: #161b22;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #7d8590;
+            --accent-blue: #2f81f7;
+            --risk-high: #f85149;
+            --risk-medium: #d29922;
+            --risk-low: #238636;
+            --row-hover-color: rgba(139, 148, 158, 0.1);
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-primary); margin: 0; padding: 20px; -webkit-font-smoothing: antialiased; }
+        
+        .container { max-width: 1600px; margin: 0 auto; }
+        
+        header { 
+            margin-bottom: 30px; 
+            animation: fadeInUp 0.5s ease-out; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .header-text {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        header svg { flex-shrink: 0; }
+        header h1 { font-size: 28px; font-weight: 600; margin: 0; }
+        header p { font-size: 16px; color: var(--text-secondary); margin: 5px 0 0; }
+
+        .primary-button { background-color: var(--accent-blue); color: #fff; padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: background-color 0.2s; }
+        .primary-button:hover { background-color: #4f9aff; }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 30px; }
+        .card { background-color: var(--surface-color); padding: 24px; border-radius: 8px; border: 1px solid var(--border-color); opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+        .card:nth-child(1) { animation-delay: 0.1s; } .card:nth-child(2) { animation-delay: 0.2s; } .card:nth-child(3) { animation-delay: 0.3s; } .card:nth-child(4) { animation-delay: 0.4s; }
+        .card-title { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+        .card-value { font-size: 32px; font-weight: 700; }
+        .card-value.high-risk { color: var(--risk-high); } .card-value.medium-risk { color: var(--risk-medium); } .card-value.low-risk { color: var(--risk-low); }
+
+        .table-wrapper { background-color: var(--surface-color); border-radius: 8px; border: 1px solid var(--border-color); opacity: 0; animation: fadeInUp 0.5s ease-out 0.5s forwards; overflow: hidden; }
+        .table-controls { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 20px; }
+        .search-box { position: relative; }
+        .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+        .search-input { background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; padding: 10px 10px 10px 40px; font-size: 14px; transition: border-color 0.2s; }
+        .search-input:focus { outline: none; border-color: var(--accent-blue); }
+        
+        .filter-controls { display: flex; flex-wrap: wrap; gap: 20px; }
+        .filter-group { display: flex; align-items: center; gap: 10px; }
+        .filter-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+        .filter-section { display: flex; gap: 8px; }
+        .filter-section span { font-size: 14px; padding: 8px 14px; border-radius: 6px; background-color: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; transition: all 0.2s ease; }
+        .filter-section input[type="radio"] { display: none; }
+        .filter-section input[type="radio"]:checked + span { background-color: var(--accent-blue); border-color: var(--accent-blue); color: #fff; font-weight: 500; }
+        
+        .table-scroll-container { overflow-x: auto; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        thead th { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; padding: 16px; text-align: left; cursor: pointer; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        thead th:hover { color: var(--text-primary); }
+        tbody td { padding: 16px; vertical-align: middle; border-top: 1px solid var(--border-color); white-space: nowrap; }
+        tbody tr { transition: background-color 0.2s ease; }
+        tbody tr:hover { background-color: var(--row-hover-color); cursor: pointer; }
+        
+        .risk-badge { padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; text-align: center; }
+        .risk-badge.high-risk { background-color: rgba(248, 81, 73, 0.15); color: var(--risk-high); }
+        .risk-badge.medium-risk { background-color: rgba(210, 153, 34, 0.15); color: var(--risk-medium); }
+        .risk-badge.low-risk { background-color: rgba(35, 134, 54, 0.15); color: var(--risk-low); }
+
+        .bulk-action-bar { padding: 20px; border-top: 1px solid var(--border-color); }
+        .bulk-alert-button { background-color: var(--accent-blue); color: #fff; padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .bulk-alert-button:disabled { background-color: #21262d; color: #484f58; cursor: not-allowed; }
+        
+        input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent-blue); cursor: pointer; }
+        
+        .progress-bar-container { display: flex; align-items: center; gap: 10px; }
+        .progress-bar-value { font-size: 14px; font-weight: 500; width: 45px; }
+        .progress-bar { flex-grow: 1; background-color: var(--border-color); border-radius: 5px; overflow: hidden; height: 8px; }
+        .text-danger { color: var(--risk-high); } .text-warning { color: var(--risk-medium); }
+        
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease; }
+        .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); width: 90%; max-width: 600px; animation: fadeInUp 0.3s ease-out; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; font-size: 20px; }
+        .modal-close { font-size: 24px; cursor: pointer; color: var(--text-secondary); border: none; background: none; }
+        .modal-body h3 { font-size: 16px; color: var(--text-primary); margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+        #modal-attendance-history { list-style: none; padding: 0; }
+        #modal-attendance-history li { display: flex; justify-content: space-between; padding: 8px 0; }
+        #modal-suggestion { background-color: rgba(47, 129, 247, 0.1); border-left: 3px solid var(--accent-blue); padding: 15px; border-radius: 4px; font-style: italic; }
+        
+        .loader { width: 50px; height: 50px; border: 5px solid var(--border-color); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 50px auto; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (max-width: 768px) {
+            body { padding: 15px; }
+            header { text-align: center; justify-content: center; }
+            .table-controls { flex-direction: column; align-items: stretch; }
+            .filter-controls { flex-direction: column; align-items: flex-start; gap: 15px; }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-text">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 9L12 4L2 9L12 14L22 9ZM21.99 11.2V17.01C21.99 17.56 21.55 18 21 18H3C2.45 18 2 17.56 2 17.01V11.2L12 16.2L21.99 11.2Z" fill="#e6edf3"/></svg>
+                <div>
+                    <h1>Student Risk Monitoring</h1>
+                    <p>Proactive intervention dashboard for student success.</p>
+                </div>
+            </div>
+            <a href="/attendance" class="primary-button">Mark Attendance</a>
+        </header>
+        
+        <div class="summary-cards">
+            <div class="card"><div class="card-title">Total Students</div><div class="card-value" id="total-students">0</div></div>
+            <div class="card"><div class="card-title">High Risk</div><div class="card-value high-risk" id="high-risk-count">0</div></div>
+            <div class="card"><div class="card-title">Medium Risk</div><div class="card-value medium-risk" id="medium-risk-count">0</div></div>
+            <div class="card"><div class="card-title">Low Risk</div><div class="card-value low-risk" id="low-risk-count">0</div></div>
+        </div>
+        
+        <div class="table-wrapper">
+            <div class="table-controls">
+                <div class="search-box">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.5 17.5L13.875 13.875M15.8333 9.16667C15.8333 12.8486 12.8486 15.8333 9.16667 15.8333C5.48477 15.8333 2.5 12.8486 2.5 9.16667C2.5 5.48477 5.48477 2.5 9.16667 2.5C12.8486 2.5 15.8333 5.48477 15.8333 9.16667Z" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <input type="text" id="search-input" class="search-input" placeholder="Search by name or ID...">
+                </div>
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <span class="filter-label">Risk:</span>
+                        <div class="filter-section">
+                            <label><input type="radio" name="risk-filter" value="All" checked><span>All</span></label>
+                            <label><input type="radio" name="risk-filter" value="High"><span>High</span></label>
+                            <label><input type="radio" name="risk-filter" value="Medium"><span>Medium</span></label>
+                            <label><input type="radio" name="risk-filter" value="Low"><span>Low</span></label>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Fee:</span>
+                        <div class="filter-section">
+                            <label><input type="radio" name="fee-filter" value="All" checked><span>All</span></label>
+                            <label><input type="radio" name="fee-filter" value="Paid"><span>Paid</span></label>
+                            <label><input type="radio" name="fee-filter" value="Overdue"><span>Overdue</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-scroll-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all-checkbox"></th>
+                            <th data-sort="student_id">Student ID</th><th data-sort="name">Name</th>
+                            <th data-sort="mentor">Mentor</th><th data-sort="attendance_percentage">Attendance</th>
+                            <th data-sort="average_score">Avg. Score</th><th data-sort="exam_attempts">Attempts</th>
+                            <th data-sort="fee_status">Fee Status</th>
+                            <th data-sort="risk_level">Risk Level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-table-body"></tbody>
+                </table>
+            </div>
+            <div class="bulk-action-bar">
+                <button class="bulk-alert-button" id="bulk-alert-btn" disabled>Send Alert</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-backdrop" id="student-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-student-name"></h2>
+                <button class="modal-close" id="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Student ID:</strong> <span id="modal-student-id"></span></p>
+                <p><strong>Mentor:</strong> <span id="modal-mentor"></span></p>
+                
+                <h3>AI-Powered Suggestion</h3>
+                <p id="modal-suggestion">Loading suggestion...</p>
+
+                <h3>Recent Attendance (Last 7 Days)</h3>
+                <ul id="modal-attendance-history"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://efwxryrhzkhvxzmwbbpv.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmd3hyeXJoemtodnh6bXdiYnB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NDMzNjQsImV4cCI6MjA3MzQxOTM2NH0.tCh_I_eZsjqjuoNe-faczMTFI6DzwtDbS3S8e5iGkqE';
+
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let allStudentsData = [];
+        let currentSort = { column: 'risk_level', direction: 'desc' };
+
+        const studentTableBody = document.getElementById('student-table-body');
+        const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        const bulkAlertBtn = document.getElementById('bulk-alert-btn');
+        const studentModal = document.getElementById('student-modal');
+        const closeModalBtn = document.getElementById('modal-close-btn');
+
+        function renderTable(studentsToDisplay) { 
+            studentTableBody.innerHTML = '';
+            if (studentsToDisplay.length === 0) {
+                studentTableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 40px; color: var(--text-secondary);">No students found.</td></tr>`;
+                return;
+            }
+            studentsToDisplay.forEach(student => {
+                const row = document.createElement('tr');
+                row.dataset.studentId = student.student_id;
+                const riskClass = `risk-badge ${student.risk_level.toLowerCase()}-risk`;
+                row.innerHTML = `
+                    <td><input type="checkbox" class="student-checkbox" data-student-id="${student.student_id}"></td>
+                    <td>${student.student_id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.mentor}</td>
+                    <td><div class="progress-bar-container">${createProgressBar(student.attendance_percentage)}</div></td>
+                    <td><div class="progress-bar-container">${createProgressBar(student.average_score)}</div></td>
+                    <td class="${student.exam_attempts > 3 ? 'text-warning' : ''}">${student.exam_attempts}</td>
+                    <td class="${student.fee_status !== 'Paid' ? 'text-warning' : ''}">${student.fee_status}</td>
+                    <td><span class="${riskClass}">${student.risk_level}</span></td>
+                `;
+                studentTableBody.appendChild(row);
+            });
+            updateBulkActionButton();
+        }
+
+        function createProgressBar(value) {
+            const colorClass = value < 50 ? 'text-danger' : (value < 75 ? 'text-warning' : '');
+            const barColor = value < 50 ? 'var(--risk-high)' : (value < 75 ? 'var(--risk-medium)' : 'var(--risk-low)');
+            return `<span class="progress-bar-value ${colorClass}">${value}%</span><div class="progress-bar"><div style="width:${value}%; background-color:${barColor}; height: 8px; border-radius: 5px;"></div></div>`;
+        }
+
+        function updateSummaryCards(data) {
+            document.getElementById('total-students').textContent = data.length;
+            document.getElementById('low-risk-count').textContent = data.filter(s => s.risk_level === 'Low').length;
+            document.getElementById('medium-risk-count').textContent = data.filter(s => s.risk_level === 'Medium').length;
+            document.getElementById('high-risk-count').textContent = data.filter(s => s.risk_level === 'High').length;
+        }
+
+        async function showStudentModal(studentId) {
+            const student = allStudentsData.find(s => s.student_id === studentId);
+            if (!student) return;
+            
+            document.getElementById('modal-student-name').textContent = student.name;
+            document.getElementById('modal-student-id').textContent = student.student_id;
+            document.getElementById('modal-mentor').textContent = student.mentor;
+            
+            studentModal.style.display = 'flex';
+            
+            const suggestionP = document.getElementById('modal-suggestion');
+            suggestionP.textContent = 'Loading suggestion...';
+            const suggestionRes = await fetch(`/get-student-suggestion/${studentId}`);
+            const suggestionData = await suggestionRes.json();
+            suggestionP.textContent = suggestionData.suggestion || 'Could not generate suggestion.';
+
+            const historyUl = document.getElementById('modal-attendance-history');
+            historyUl.innerHTML = '<li>Loading history...</li>';
+            const historyRes = await fetch(`/get-student-attendance/${studentId}`);
+            const historyData = await historyRes.json();
+            
+            historyUl.innerHTML = '';
+            if (historyData && historyData.length > 0) {
+                historyData.forEach(rec => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>${rec.date}</span><strong>${rec.status}</strong>`;
+                    historyUl.appendChild(li);
+                });
+            } else {
+                historyUl.innerHTML = '<li>No recent attendance data found.</li>';
+            }
+        }
+        
+        function applyFiltersAndSort() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const riskFilter = document.querySelector('input[name="risk-filter"]:checked').value;
+            const feeFilter = document.querySelector('input[name="fee-filter"]:checked').value;
+
+            let filteredData = allStudentsData.filter(s => 
+                (s.name.toLowerCase().includes(searchTerm) || s.student_id.toString().includes(searchTerm)) &&
+                (riskFilter === 'All' || s.risk_level === riskFilter) &&
+                (feeFilter === 'All' || s.fee_status === feeFilter)
+            );
+
+            const riskOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+            filteredData.sort((a, b) => {
+                let valA, valB;
+                if (currentSort.column === 'risk_level') {
+                    valA = riskOrder[a.risk_level] || 0;
+                    valB = riskOrder[b.risk_level] || 0;
+                } else {
+                    valA = a[currentSort.column];
+                    valB = b[currentSort.column];
+                }
+                let comparison = (valA > valB) ? 1 : ((valA < valB) ? -1 : 0);
+                return currentSort.direction === 'asc' ? comparison : comparison * -1;
+            });
+            renderTable(filteredData);
+        }
+
+        async function fetchStudentData() {
+            studentTableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;"><div class="loader"></div></td></tr>`;
+            const { data } = await supabaseClient.from('students').select('*');
+            allStudentsData = data || [];
+            updateSummaryCards(allStudentsData);
+            applyFiltersAndSort();
+        }
+
+        function updateBulkActionButton() {
+            const selected = document.querySelectorAll('.student-checkbox:checked').length;
+            bulkAlertBtn.disabled = selected === 0;
+            bulkAlertBtn.textContent = selected > 0 ? `Send Alert to ${selected} Student(s)` : 'Send Alert';
+            const totalOnPage = document.querySelectorAll('.student-checkbox').length;
+            selectAllCheckbox.checked = totalOnPage > 0 && selected === totalOnPage;
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('search-input').addEventListener('input', applyFiltersAndSort);
+        document.querySelectorAll('.filter-controls').forEach(fc => fc.addEventListener('change', applyFiltersAndSort));
+        
+        document.querySelector('thead').addEventListener('click', e => {
+            const column = e.target.dataset.sort;
+            if (!column) return;
+            const direction = currentSort.column === column && currentSort.direction === 'asc' ? 'desc' : 'asc';
+            currentSort = { column, direction };
+            applyFiltersAndSort();
+        });
+
+        studentTableBody.addEventListener('click', e => {
+            if (e.target.tagName === 'INPUT' && e.target.type === 'checkbox') {
+                 e.stopPropagation(); 
+                 updateBulkActionButton();
+                 return; 
+            }
+            const row = e.target.closest('tr');
+            if (row && row.dataset.studentId) showStudentModal(parseInt(row.dataset.studentId));
+        });
+        
+        closeModalBtn.addEventListener('click', () => studentModal.style.display = 'none');
+        studentModal.addEventListener('click', e => { if (e.target === studentModal) studentModal.style.display = 'none'; });
+        
+        selectAllCheckbox.addEventListener('change', () => {
+             document.querySelectorAll('#student-table-body .student-checkbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
+             updateBulkActionButton();
+        });
+        
+        bulkAlertBtn.addEventListener('click', async () => { /* Unchanged */ });
+
+        document.addEventListener('DOMContentLoaded', fetchStudentData);
+    </script>
+</body>
+</html>
