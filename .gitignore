@@ -1,0 +1,8 @@
+Python
+pycache/
+*.pyc
+venv/
+*.env
+
+IDE - VSCode
+.vscode/
