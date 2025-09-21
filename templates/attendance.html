@@ -6,76 +6,265 @@
     <title>Mark Attendance</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0d1117; --surface-color: #161b22; --border-color: #30363d;
-            --text-primary: #e6edf3; --text-secondary: #7d8590; --accent-blue: #2f81f7;
-            --status-present: #238636; --status-absent: #da3633;
+            /* Copied from index.html for consistency */
+            --bg-color: #1e1e2f;
+            --surface-color: #27293d;
+            --border-color: #3a3b5a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0b8;
+            --accent-blue: #5a67d8;
+            --risk-high: #e53e3e;
+            --risk-medium: #dd6b20;
+            --risk-low: #38a169;
+            --row-hover-color: rgba(90, 103, 216, 0.1);
+            
+            /* Attendance specific aliases */
+            --status-present: var(--risk-low);
+            --status-absent: var(--risk-high);
         }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
         
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-primary); padding: 2rem; }
-        .container { max-width: 1000px; margin: auto; }
-        h1 { font-size: 2rem; }
-        .subtitle { color: var(--text-secondary); margin-bottom: 2rem; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin: 0;
+        }
         
-        .controls { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; }
-        .controls input, .controls select { background-color: var(--surface-color); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 6px; font-size: 1rem; }
+        .page-description {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .controls input, .controls select {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .button {
+            background: linear-gradient(45deg, var(--accent-blue), #7f5af0);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 700;
+            transition: transform 0.2s;
+            text-decoration: none;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+        }
         
-        .student-list-container { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
-        .student-row, .student-list-header { display: grid; grid-template-columns: 120px 1fr 0.5fr 1fr 150px 150px; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color); }
-        .student-list-header { font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem; }
-        .student-list-header > div[data-sort] { cursor: pointer; user-select: none; }
-        .student-list-header > div[data-sort]:hover { color: var(--text-primary); }
-        .student-row:last-child { border-bottom: none; }
+        .button-secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .button-secondary:hover {
+            background-color: var(--surface-color);
+            transform: translateY(-2px);
+        }
+
+        .button:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+            color: var(--text-secondary);
+            transform: none;
+        }
         
-        /* Sort Indicator */
-        .sort-indicator { display: inline-block; margin-left: 8px; opacity: 0; transition: opacity 0.2s, transform 0.2s; font-size: 0.9em; }
+        .table-container {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            animation: fadeInUp 0.7s ease-out;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+
+        th, td {
+            padding: 1.25rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        th {
+            font-weight: 700;
+            color: var(--text-secondary);
+            user-select: none;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        th[data-sort]:hover {
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .sort-indicator {
+            display: inline-block;
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
         .sort-indicator.active { opacity: 1; }
         .sort-indicator.desc { transform: rotate(180deg); }
-        
-        /* Attendance Toggle Switch */
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: var(--row-hover-color); }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent-blue); }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--status-absent);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--status-present); }
         input:checked + .slider:before { transform: translateX(22px); }
+        
+        .status-text { font-weight: 700; }
+        .status-text.present { color: var(--status-present); }
+        .status-text.absent { color: var(--status-absent); }
 
-        .status-text { font-weight: 600; }
-        .present-text { color: var(--accent-blue); }
-        .absent-text { color: var(--text-secondary); }
-        
-        .action-footer { margin-top: 2rem; display: flex; align-items: center; }
-        .button { background-color: var(--accent-blue); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; }
-        .button:hover { background-color: #4895ff; }
-        .button:disabled { background-color: var(--border-color); cursor: not-allowed; color: var(--text-secondary); }
-        .button-secondary { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
-        .button-secondary:hover { background-color: var(--surface-color); }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+            animation: fadeInUp 0.3s;
+        }
+        .modal-content {
+            background-color: var(--surface-color);
+            margin: 5% auto;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .close-button {
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        .history-table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .history-table th, .history-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .modal-footer {
+            margin-top: 1.5rem;
+            text-align: right;
+        }
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
 
-        /* Modal for Attendance History */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); animation: fadeIn 0.3s; }
-        .modal-content { background-color: var(--surface-color); margin: 5% auto; padding: 2rem; border: 1px solid var(--border-color); border-radius: 8px; width: 90%; max-width: 600px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem; }
-        .modal-header h2 { margin: 0; }
-        .close-button { color: var(--text-secondary); font-size: 2rem; font-weight: bold; cursor: pointer; }
-        .close-button:hover { color: var(--text-primary); }
-        
-        .history-table-container { max-height: 60vh; overflow-y: auto; }
-        .history-table { width: 100%; border-collapse: collapse; }
-        .history-table th, .history-table td { padding: 0.75rem; border-bottom: 1px solid var(--border-color); text-align: left; }
-        .history-table th { background-color: #1c2128; }
-        
-        .modal-footer { margin-top: 1.5rem; text-align: right; }
-        .loader { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 4rem auto; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Mark Today's Attendance</h1>
-        <p class="subtitle">Toggle the switch for each student and submit. Today is {{ date.today().strftime('%B %d, %Y') }}.</p>
+        <div class="header">
+            <h1>Mark Today's Attendance</h1>
+            <a href="/" class="button">Back to Dashboard</a>
+        </div>
+        <p class="page-description" id="date-display">Toggle the status for each student and submit.</p>
         
         <div class="controls">
             <input type="text" id="search-input" placeholder="Search by name...">
@@ -83,36 +272,35 @@
             <select id="mentor-filter"><option value="">All Mentors</option></select>
         </div>
 
-        <div class="student-list-container">
-            <div class="student-list-header">
-                <div data-sort="student_id">Student ID<span class="sort-indicator">▲</span></div>
-                <div data-sort="name">Student<span class="sort-indicator">▲</span></div>
-                <div data-sort="class">Class<span class="sort-indicator">▲</span></div>
-                <div data-sort="mentor">Mentor<span class="sort-indicator">▲</span></div>
-                <div>History</div>
-                <div>Today's Status</div>
-            </div>
-            <div id="attendance-student-list">
-                <div class="loader"></div>
-            </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th data-sort="student_id">ID<span class="sort-indicator">▲</span></th>
+                        <th data-sort="name">Name<span class="sort-indicator">▲</span></th>
+                        <th data-sort="class">Class<span class="sort-indicator">▲</span></th>
+                        <th>History</th>
+                        <th>Today's Status</th>
+                    </tr>
+                </thead>
+                <tbody id="student-table-body">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
         </div>
 
-        <div class="action-footer">
+        <div style="margin-top:2rem; text-align:right;">
             <button id="submit-attendance-btn" class="button">Submit Attendance</button>
-            <a href="/" style="text-decoration: none; color: var(--text-secondary); margin-left: 1rem;">Back to Dashboard</a>
         </div>
     </div>
-
-    <!-- Attendance History Modal -->
+    
     <div id="history-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="history-modal-title">Attendance History</h2>
                 <span class="close-button" id="close-history-modal">&times;</span>
             </div>
-            <div id="history-modal-body" class="history-table-container">
-                <!-- Editable history table will be generated here -->
-            </div>
+            <div id="history-modal-body" class="history-table-container"></div>
             <div class="modal-footer">
                 <button id="save-history-btn" class="button">Save Changes</button>
             </div>
@@ -122,23 +310,28 @@
     <script>
         let allStudents = [];
         let filteredStudents = [];
+        let attendanceState = {};
         let currentSort = { column: 'name', direction: 'asc' };
 
-        const studentList = document.getElementById('attendance-student-list');
-        const submitBtn = document.getElementById('submit-attendance-btn');
-        const historyModal = document.getElementById('history-modal');
-        const closeModalBtn = document.getElementById('close-history-modal');
+        const studentTableBody = document.getElementById('student-table-body');
         const searchInput = document.getElementById('search-input');
         const classFilter = document.getElementById('class-filter');
         const mentorFilter = document.getElementById('mentor-filter');
-        const headerContainer = document.querySelector('.student-list-header');
+        const submitBtn = document.getElementById('submit-attendance-btn');
+        const historyModal = document.getElementById('history-modal');
+        const closeModalBtn = document.getElementById('close-history-modal');
+        const headerContainer = document.querySelector('thead tr');
 
-        function populateFilters() {
-            const classes = [...new Set(allStudents.map(s => s.class))].sort((a,b) => a - b);
-            const mentors = [...new Set(allStudents.map(s => s.mentor))].sort();
-            
-            classes.forEach(c => classFilter.innerHTML += `<option value="${c}">${c}</option>`);
-            mentors.forEach(m => mentorFilter.innerHTML += `<option value="${m}">${m}</option>`);
+        function setDateDisplay() {
+            const date = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date-display').textContent += ` Today is ${date.toLocaleDateString('en-US', options)}.`;
+        }
+
+        function initializeAttendanceState() {
+            allStudents.forEach(student => {
+                attendanceState[student.student_id] = 'Present';
+            });
         }
         
         function sortAndRender() {
@@ -157,87 +350,91 @@
                 return 0;
             });
 
-            // Update sort indicators in header
-            headerContainer.querySelectorAll('.sort-indicator').forEach(el => {
-                el.classList.remove('active', 'desc');
-            });
+            headerContainer.querySelectorAll('.sort-indicator').forEach(el => el.classList.remove('active', 'desc'));
             const activeIndicator = headerContainer.querySelector(`[data-sort="${column}"] .sort-indicator`);
             if (activeIndicator) {
                 activeIndicator.classList.add('active');
                 if (direction === 'desc') activeIndicator.classList.add('desc');
             }
-
-            renderStudentList(filteredStudents);
+            renderStudentTable(filteredStudents);
         }
 
-        function applyFilters() {
+        function applyFiltersAndSort() {
             const searchTerm = searchInput.value.toLowerCase();
             const selectedClass = classFilter.value;
             const selectedMentor = mentorFilter.value;
 
-            filteredStudents = allStudents.filter(student => {
-                const nameMatch = student.name.toLowerCase().includes(searchTerm);
-                const classMatch = !selectedClass || student.class.toString() === selectedClass;
-                const mentorMatch = !selectedMentor || student.mentor === selectedMentor;
-                return nameMatch && classMatch && mentorMatch;
-            });
+            filteredStudents = allStudents.filter(student => 
+                student.name.toLowerCase().includes(searchTerm) &&
+                (!selectedClass || student.class.toString() === selectedClass) &&
+                (!selectedMentor || student.mentor === selectedMentor)
+            );
             sortAndRender();
         }
-
-        function renderStudentList(students) {
-            studentList.innerHTML = ''; 
+        
+        function renderStudentTable(students) {
+            studentTableBody.innerHTML = '';
             if (students.length === 0) {
-                studentList.innerHTML = '<p style="text-align: center; padding: 2rem;">No students match the current filters.</p>';
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="5" style="text-align: center; padding: 2rem;">No students match the current filters.</td>`;
+                studentTableBody.appendChild(row);
                 return;
             }
             students.forEach(student => {
-                const row = document.createElement('div');
-                row.className = 'student-row';
+                const row = document.createElement('tr');
                 row.dataset.studentId = student.student_id;
+                
+                const isPresent = attendanceState[student.student_id] === 'Present';
+                const statusClass = isPresent ? 'present' : 'absent';
+                const statusText = isPresent ? 'Present' : 'Absent';
+                const checkedAttr = isPresent ? 'checked' : '';
+
                 row.innerHTML = `
-                    <div>${student.student_id}</div>
-                    <div><strong>${student.name}</strong></div>
-                    <div>${student.class}</div>
-                    <div>${student.mentor}</div>
-                    <div>
-                        <button class="button button-secondary view-history-btn" data-student-id="${student.student_id}" data-student-name="${student.name}">View History</button>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
+                    <td>${student.student_id}</td>
+                    <td><strong>${student.name}</strong><br><small style="color:var(--text-secondary)">${student.mentor}</small></td>
+                    <td>Class ${student.class}</td>
+                    <td style="text-align:center;"><button class="button button-secondary view-history-btn" data-student-id="${student.student_id}" data-student-name="${student.name}">View</button></td>
+                    <td style="display: flex; align-items: center; gap: 1rem;">
                         <label class="switch">
-                            <input type="checkbox" class="attendance-checkbox" checked>
+                            <input type="checkbox" class="attendance-checkbox" data-id="${student.student_id}" ${checkedAttr}>
                             <span class="slider"></span>
                         </label>
-                        <span class="status-text present-text">Present</span>
-                    </div>
+                        <span class="status-text ${statusClass}">${statusText}</span>
+                    </td>
                 `;
-                studentList.appendChild(row);
+                studentTableBody.appendChild(row);
             });
         }
 
-        async function fetchStudentsForAttendance() {
+        async function fetchStudents() {
+            studentTableBody.innerHTML = `<tr><td colspan="5"><div class="loader"></div></td></tr>`;
             try {
                 const response = await fetch('/api/students');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 allStudents = await response.json();
+                initializeAttendanceState();
                 populateFilters();
-                applyFilters();
+                applyFiltersAndSort();
             } catch (error) {
-                studentList.innerHTML = '<p>Error loading student data. Please try refreshing.</p>';
+                studentTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--status-absent);">Error loading student data. Please try refreshing.</td></tr>`;
                 console.error('Failed to fetch students:', error);
             }
         }
-
+        
+        function populateFilters() {
+            const classes = [...new Set(allStudents.map(s => s.class))].sort((a,b) => a - b);
+            const mentors = [...new Set(allStudents.map(s => s.mentor))].sort();
+            classes.forEach(c => classFilter.innerHTML += `<option value="${c}">Class ${c}</option>`);
+            mentors.forEach(m => mentorFilter.innerHTML += `<option value="${m}">${m}</option>`);
+        }
+        
         async function submitAttendance() {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Submitting...';
-            const records = [];
-            document.querySelectorAll('.student-row').forEach(row => {
-                if (filteredStudents.some(s => s.student_id == row.dataset.studentId)) {
-                    const studentId = parseInt(row.dataset.studentId);
-                    const isPresent = row.querySelector('.attendance-checkbox').checked;
-                    records.push({ student_id: studentId, status: isPresent ? 'Present' : 'Absent' });
-                }
-            });
-
+            const records = Object.entries(attendanceState).map(([student_id, status]) => ({
+                student_id: parseInt(student_id),
+                status: status
+            }));
             try {
                 const response = await fetch('/mark-attendance', {
                     method: 'POST',
@@ -260,7 +457,6 @@
             const modalTitle = document.getElementById('history-modal-title');
             const modalBody = document.getElementById('history-modal-body');
             const saveBtn = document.getElementById('save-history-btn');
-            
             modalTitle.textContent = `Attendance History for ${studentName}`;
             modalBody.innerHTML = '<div class="loader"></div>';
             historyModal.style.display = 'block';
@@ -269,50 +465,34 @@
             try {
                 const response = await fetch(`/get-student-full-attendance/${studentId}`);
                 const history = await response.json();
-                
                 if (history.length === 0) {
                     modalBody.innerHTML = '<p>No attendance history found.</p>';
                     saveBtn.style.display = 'none';
                     return;
                 }
                 saveBtn.style.display = 'inline-block';
-                
                 const table = document.createElement('table');
                 table.className = 'history-table';
                 let tableHTML = '<thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>';
-                
                 history.reverse().forEach(record => {
                     const isChecked = record.status === 'Present' ? 'checked' : '';
-                    tableHTML += `
-                        <tr>
-                            <td>${record.date}</td>
-                            <td>
-                                <label class="switch">
-                                    <input type="checkbox" class="history-checkbox" data-date="${record.date}" ${isChecked}>
-                                    <span class="slider"></span>
-                                </label>
-                            </td>
-                        </tr>
-                    `;
+                    tableHTML += `<tr><td>${record.date}</td><td><label class="switch"><input type="checkbox" class="history-checkbox" data-date="${record.date}" ${isChecked}><span class="slider"></span></label></td></tr>`;
                 });
                 tableHTML += '</tbody>';
                 table.innerHTML = tableHTML;
                 modalBody.innerHTML = '';
                 modalBody.appendChild(table);
-
             } catch (error) {
                 modalBody.innerHTML = '<p>Could not load attendance history.</p>';
-                console.error("History fetch error:", error);
             }
         }
-
+        
         async function saveAttendanceChanges(e) {
             const saveBtn = e.target;
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             const studentId = parseInt(saveBtn.dataset.studentId);
             const records = [];
-
             document.querySelectorAll('.history-checkbox').forEach(checkbox => {
                 records.push({
                     student_id: studentId,
@@ -329,7 +509,7 @@
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
-                    alert('History updated successfully! The dashboard will now reflect the changes.');
+                    alert('History updated successfully!');
                     historyModal.style.display = 'none';
                 } else { throw new Error(result.message); }
             } catch (error) {
@@ -340,15 +520,14 @@
             }
         }
 
-        // --- Event Listeners ---
-        searchInput.addEventListener('input', applyFilters);
-        classFilter.addEventListener('change', applyFilters);
-        mentorFilter.addEventListener('change', applyFilters);
+        // --- EVENT LISTENERS ---
+        searchInput.addEventListener('input', applyFiltersAndSort);
+        classFilter.addEventListener('change', applyFiltersAndSort);
+        mentorFilter.addEventListener('change', applyFiltersAndSort);
 
         headerContainer.addEventListener('click', e => {
             const header = e.target.closest('[data-sort]');
             if (!header) return;
-
             const column = header.dataset.sort;
             if (currentSort.column === column) {
                 currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -359,18 +538,23 @@
             sortAndRender();
         });
 
-        studentList.addEventListener('change', e => {
+        studentTableBody.addEventListener('change', e => {
             if (e.target.classList.contains('attendance-checkbox')) {
-                const statusText = e.target.parentElement.nextElementSibling;
-                statusText.textContent = e.target.checked ? 'Present' : 'Absent';
-                statusText.className = e.target.checked ? 'status-text present-text' : 'status-text absent-text';
+                const studentId = e.target.dataset.id;
+                const newStatus = e.target.checked ? 'Present' : 'Absent';
+                attendanceState[studentId] = newStatus;
+
+                const statusText = e.target.closest('td').querySelector('.status-text');
+                statusText.textContent = newStatus;
+                statusText.className = `status-text ${newStatus.toLowerCase()}`;
             }
         });
         
-        studentList.addEventListener('click', e => {
-            if (e.target.classList.contains('view-history-btn')) {
-                const studentId = parseInt(e.target.dataset.studentId);
-                const studentName = e.target.dataset.studentName;
+        studentTableBody.addEventListener('click', e => {
+            const historyButton = e.target.closest('.view-history-btn');
+            if (historyButton) {
+                const studentId = parseInt(historyButton.dataset.studentId);
+                const studentName = historyButton.dataset.studentName;
                 showAttendanceHistory(studentId, studentName);
             }
         });
@@ -378,11 +562,16 @@
         submitBtn.addEventListener('click', submitAttendance);
         closeModalBtn.addEventListener('click', () => historyModal.style.display = 'none');
         document.getElementById('save-history-btn').addEventListener('click', saveAttendanceChanges);
-        window.addEventListener('click', e => {
-            if (e.target == historyModal) historyModal.style.display = 'none';
+        window.addEventListener('click', e => { 
+            if (e.target == historyModal) {
+                historyModal.style.display = 'none'; 
+            }
         });
 
-        document.addEventListener('DOMContentLoaded', fetchStudentsForAttendance);
+        document.addEventListener('DOMContentLoaded', () => {
+            setDateDisplay();
+            fetchStudents();
+        });
     </script>
 </body>
 </html>

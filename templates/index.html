@@ -26,9 +26,8 @@
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; animation: fadeInUp 0.5s ease-out; }
         h1 { font-size: 2.25rem; font-weight: 700; margin: 0; }
-        .header-actions { display: flex; align-items: center; gap: 1.5rem; }
         
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
         .stat-card { background-color: var(--surface-color); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); }
         .stat-card-title { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
         .stat-card-value { font-size: 2.25rem; font-weight: 700; }
@@ -40,10 +39,14 @@
         .chart-container h3 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem; font-weight: 500; }
         
         .controls { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; animation: fadeInUp 0.7s ease-out; }
-        .controls input, .controls select { background-color: var(--surface-color); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 8px; font-size: 1rem; }
+        .controls input, .controls select { background-color: var(--surface-color); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 8px; font-size: 1rem; flex-grow: 1; }
+        .controls .button { flex-shrink: 0; }
+        
         .button { background: linear-gradient(45deg, #5a67d8, #7f5af0); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; transition: transform 0.2s; text-decoration: none; }
         .button:hover { transform: translateY(-2px); }
         .button:disabled { background: var(--border-color); cursor: not-allowed; color: var(--text-secondary); transform: none; }
+
+        .footer-actions { margin-top: 2rem; text-align: right; animation: fadeInUp 0.9s ease-out; }
         
         .table-container { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; animation: fadeInUp 0.8s ease-out; }
         table { width: 100%; border-collapse: collapse; }
@@ -81,25 +84,18 @@
     <div class="container">
         <div class="header">
             <h1>Student Dashboard</h1>
-            <div class="header-actions">
-                <a href="/attendance" class="button">Mark Attendance</a>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-card-title">Total Students</div>
-                        <div class="stat-card-value" id="total-students-val">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-title">High Risk</div>
-                        <div class="stat-card-value high-risk" id="high-risk-val">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-title">Avg. Attendance</div>
-                        <div class="stat-card-value" id="avg-attendance-val">--%</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-title">Fees Overdue</div>
-                        <div class="stat-card-value overdue" id="overdue-fees-val">--</div>
-                    </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-title">Total Students</div>
+                    <div class="stat-card-value" id="total-students-val">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">High Risk</div>
+                    <div class="stat-card-value high-risk" id="high-risk-val">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">Fees Overdue</div>
+                    <div class="stat-card-value overdue" id="overdue-fees-val">--</div>
                 </div>
             </div>
         </div>
@@ -119,7 +115,13 @@
             <input type="text" id="search-input" placeholder="Search by name...">
             <select id="class-filter"><option value="">All Classes</option></select>
             <select id="mentor-filter"><option value="">All Mentors</option></select>
-            <button id="bulk-alert-btn" class="button" disabled>Send Bulk Alert</button>
+            <select id="risk-filter">
+                <option value="">All Risk Levels</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+            <a href="/attendance" class="button">Mark Attendance</a>
         </div>
 
         <div class="table-container">
@@ -138,6 +140,10 @@
                 </thead>
                 <tbody id="student-table-body"></tbody>
             </table>
+        </div>
+
+        <div class="footer-actions">
+            <button id="bulk-alert-btn" class="button" disabled>Send Bulk Alert</button>
         </div>
     </div>
     
@@ -163,78 +169,83 @@
     </div>
 
     <script>
-        // All variables remain the same...
         let allStudents = [];
         let filteredStudents = [];
         let currentSort = { column: 'name', direction: 'asc' };
         let riskChart, scatterChart, modalAttendanceChart;
         
-        async function showStudentModal(studentId) {
-            const student = allStudents.find(s => s.student_id === studentId);
-            if (!student) return;
+        const studentTableBody = document.getElementById('student-table-body');
+        const searchInput = document.getElementById('search-input');
+        const classFilter = document.getElementById('class-filter');
+        const mentorFilter = document.getElementById('mentor-filter');
+        const riskFilter = document.getElementById('risk-filter');
+        const bulkAlertBtn = document.getElementById('bulk-alert-btn');
+        const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        const studentModal = document.getElementById('student-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        
+        function applyFiltersAndSort() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedClass = classFilter.value;
+            const selectedMentor = mentorFilter.value;
+            const selectedRisk = riskFilter.value;
 
-            const studentModal = document.getElementById('student-modal');
-            document.getElementById('modal-student-name').textContent = student.name;
-            document.getElementById('modal-student-info').innerHTML = `
-                <strong>ID:</strong> ${student.student_id}<br>
-                <strong>Class:</strong> ${student.class}<br>
-                <strong>Mentor:</strong> ${student.mentor} (${student.mentor_email})<br>
-                <strong>Guardian Contact:</strong> ${student.guardian_email}
-            `;
-            document.getElementById('modal-suggestion').textContent = "Generating suggestion...";
-            studentModal.style.display = 'block';
+            filteredStudents = allStudents.filter(student => 
+                student.name.toLowerCase().includes(searchTerm) &&
+                (!selectedClass || student.class.toString() === selectedClass) &&
+                (!selectedMentor || student.mentor === selectedMentor) &&
+                (!selectedRisk || student.risk_level === selectedRisk)
+            );
+            sortAndRender();
+        }
 
-            const [suggestionRes, attendanceRes] = await Promise.all([
-                fetch(`/api/mentor-suggestion/${studentId}`),
-                fetch(`/get-student-attendance/${studentId}`)
-            ]);
-            const suggestionData = await suggestionRes.json();
-            const attendanceData = await attendanceRes.json();
-            
-            document.getElementById('modal-suggestion').textContent = suggestionData.suggestion || "No suggestion available.";
-
-            const attendanceCtx = document.getElementById('modal-attendance-chart').getContext('2d');
-            if (modalAttendanceChart) modalAttendanceChart.destroy();
-            modalAttendanceChart = new Chart(attendanceCtx, {
-                type: 'bar',
-                data: {
-                    labels: attendanceData.map(a => a.date).reverse(),
-                    datasets: [{
-                        data: attendanceData.map(a => a.status === 'Present' ? 1 : 0).reverse(),
-                        backgroundColor: attendanceData.map(a => a.status === 'Present' ? '#38a169' : '#e53e3e').reverse(),
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    scales: { y: { display: false }, x: { ticks: { color: '#a0a0b8' }, grid: { display: false } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
+        async function fetchKpiStats() {
+            try {
+                const response = await fetch('/api/kpi-stats');
+                const stats = await response.json();
+                document.getElementById('total-students-val').textContent = stats.total_students;
+                document.getElementById('high-risk-val').textContent = stats.high_risk_count;
+                document.getElementById('overdue-fees-val').textContent = stats.overdue_fees_count;
+            } catch (error) {
+                console.error("Failed to fetch KPI stats:", error);
+            }
         }
         
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchStudentData();
+            fetchDashboardStats();
+            fetchKpiStats();
+        });
+        
+        searchInput.addEventListener('input', applyFiltersAndSort);
+        classFilter.addEventListener('change', applyFiltersAndSort);
+        mentorFilter.addEventListener('change', applyFiltersAndSort);
+        riskFilter.addEventListener('change', applyFiltersAndSort);
+        
         // --- All other JS functions and event listeners are unchanged ---
-        // (getProgressBar, renderStudentTable, fetchKpiStats, etc.)
         function getProgressBar(value) { let c='low'; if (value >= 75) c='high'; else if (value >= 50) c='medium'; return `<div class="progress-bar-container"><div class="progress-bar ${c}" style="width: ${value}%">${value}%</div></div>`;}
         function getFeeStatusTag(s) { return `<span class="tag ${s==='Overdue'?'fee-status-overdue':'fee-status-paid'}">${s}</span>`;}
         function getAttemptsTag(a) { let c='attempts-low'; if (a > 3) c='attempts-high'; else if (a > 1) c='attempts-medium'; return `<span class="tag ${c}">${a}</span>`;}
         function renderStudentTable(students) { const t=document.getElementById('student-table-body'); t.innerHTML=''; students.forEach(s=>{const r=document.createElement('tr');r.dataset.studentId=s.student_id;r.innerHTML=`<td><input type="checkbox" class="student-checkbox" data-id="${s.student_id}"></td><td>${s.student_id}</td><td><strong>${s.name}</strong><br><small style="color:var(--text-secondary)">Class ${s.class}</small></td><td>${getProgressBar(s.attendance_percentage)}</td><td>${getProgressBar(s.average_score)}</td><td>${getAttemptsTag(s.exam_attempts)}</td><td>${getFeeStatusTag(s.fee_status)}</td><td><div class="risk-level-${s.risk_level.toLowerCase()}">${s.risk_level}</div></td>`;t.appendChild(r)})}
-        async function fetchKpiStats() { try { const r=await fetch('/api/kpi-stats'); const s=await r.json(); document.getElementById('total-students-val').textContent=s.total_students; document.getElementById('high-risk-val').textContent=s.high_risk_count; document.getElementById('avg-attendance-val').textContent=`${s.average_attendance}%`; document.getElementById('overdue-fees-val').textContent=s.overdue_fees_count; } catch (e) {console.error("Failed to fetch KPI stats:", e)}}
         async function fetchDashboardStats() { try { const r=await fetch('/api/dashboard-stats'); const d=await r.json(); const rCtx=document.getElementById('risk-distribution-chart').getContext('2d'); if(riskChart)riskChart.destroy(); riskChart=new Chart(rCtx,{type:'doughnut',data:{labels:['High Risk','Medium Risk','Low Risk'],datasets:[{data:[d.risk_distribution.High||0,d.risk_distribution.Medium||0,d.risk_distribution.Low||0],backgroundColor:['#e53e3e','#dd6b20','#38a169'],borderColor:'#27293d',borderWidth:4}]},options:{responsive:!0,plugins:{legend:{position:'bottom',labels:{color:'#f0f0f0'}}}}}); const sCtx=document.getElementById('attendance-score-chart').getContext('2d'); if(scatterChart)scatterChart.destroy(); scatterChart=new Chart(sCtx,{type:'scatter',data:{datasets:[{label:'Students',data:d.attendance_vs_scores.map(s=>({x:s.attendance_percentage,y:s.average_score})),backgroundColor:'#5a67d8'}]},options:{responsive:!0,scales:{x:{title:{display:!0,text:'Attendance Percentage',color:'#a0a0b8'},ticks:{color:'#a0a0b8'},grid:{color:'#3a3b5a'}},y:{title:{display:!0,text:'Average Score',color:'#a0a0b8'},ticks:{color:'#a0a0b8'},grid:{color:'#3a3b5a'}}},plugins:{legend:{display:!1}}}})} catch(e){console.error("Failed to fetch dashboard stats:",e)}}
         function populateFilters() { const cF=document.getElementById('class-filter'); const mF=document.getElementById('mentor-filter'); const c=[...new Set(allStudents.map(s=>s.class))].sort((a,b)=>a-b); const m=[...new Set(allStudents.map(s=>s.mentor))].sort(); c.forEach(c=>cF.innerHTML+=`<option value="${c}">${c}</option>`); m.forEach(m=>mF.innerHTML+=`<option value="${m}">${m}</option>`)}
         function sortAndRender() { const{column:c,direction:d}=currentSort; const m=d==='asc'?1:-1; filteredStudents.sort((a,b)=>{const vA=a[c];const vB=b[c];if(typeof vA==='string')return vA.localeCompare(vB)*m;if(vA<vB)return-1*m;if(vA>vB)return 1*m;return 0}); document.querySelectorAll('th .sort-indicator').forEach(e=>e.classList.remove('active','desc')); const aI=document.querySelector(`th[data-sort="${c}"] .sort-indicator`); if(aI){aI.classList.add('active');if(d==='desc')aI.classList.add('desc')} renderStudentTable(filteredStudents)}
-        function applyFiltersAndSort() { const sT=document.getElementById('search-input').value.toLowerCase(); const sC=document.getElementById('class-filter').value; const sM=document.getElementById('mentor-filter').value; filteredStudents=allStudents.filter(s=>s.name.toLowerCase().includes(sT)&&(!sC||s.class.toString()===sC)&&(!sM||s.mentor===sM)); sortAndRender()}
         async function fetchStudentData() { try { const r=await fetch('/api/students'); allStudents=await r.json(); populateFilters(); applyFiltersAndSort() } catch (e) { console.error('Failed to fetch student data:', e) }}
-        function updateBulkActionButton() { const sC=document.querySelectorAll('.student-checkbox:checked').length; const bA=document.getElementById('bulk-alert-btn'); bA.disabled=sC===0; bA.textContent=`Send Bulk Alert (${sC})`}
-        document.addEventListener('DOMContentLoaded', ()=>{fetchStudentData();fetchDashboardStats();fetchKpiStats()});
-        document.getElementById('search-input').addEventListener('input',applyFiltersAndSort);
-        document.getElementById('class-filter').addEventListener('change',applyFiltersAndSort);
-        document.getElementById('mentor-filter').addEventListener('change',applyFiltersAndSort);
+        function updateBulkActionButton() { const sC=document.querySelectorAll('.student-checkbox:checked').length; const bA=document.getElementById('bulk-alert-btn'); bA.disabled=sC===0; bA.textContent=`Send Alert to ${sC} Student(s)`}
+        async function showStudentModal(studentId) { const s=allStudents.find(s=>s.student_id===studentId); if(!s)return; document.getElementById('modal-student-name').textContent=s.name; document.getElementById('modal-student-info').innerHTML=`<strong>ID:</strong> ${s.student_id}<br><strong>Class:</strong> ${s.class}<br><strong>Mentor:</strong> ${s.mentor} (${s.mentor_email})<br><strong>Guardian Contact:</strong> ${s.guardian_email}`; document.getElementById('modal-suggestion').textContent="Loading suggestion..."; studentModal.style.display='block'; const[sr,ar]=await Promise.all([fetch(`/api/mentor-suggestion/${studentId}`),fetch(`/get-student-attendance/${studentId}`)]); const sd=await sr.json(); const ad=await ar.json(); document.getElementById('modal-suggestion').textContent=sd.suggestion||"No suggestion available."; const aCtx=document.getElementById('modal-attendance-chart').getContext('2d'); if(modalAttendanceChart)modalAttendanceChart.destroy(); modalAttendanceChart=new Chart(aCtx,{type:'bar',data:{labels:ad.map(a=>a.date).reverse(),datasets:[{data:ad.map(a=>a.status==='Present'?1:0).reverse(),backgroundColor:ad.map(a=>a.status==='Present'?'#38a169':'#e53e3e').reverse(),borderRadius:4}]},options:{scales:{y:{display:!1},x:{ticks:{color:'#a0a0b8'},grid:{display:!1}}},plugins:{legend:{display:!1}}}})}
         document.querySelector('thead').addEventListener('click',e=>{const h=e.target.closest('[data-sort]');if(!h)return;const c=h.dataset.sort;const d=currentSort.column===c&&currentSort.direction==='asc'?'desc':'asc';currentSort={column:c,direction:d};applyFiltersAndSort()});
-        document.getElementById('student-table-body').addEventListener('click',e=>{if(e.target.type==='checkbox'){e.stopPropagation();updateBulkActionButton();return} const r=e.target.closest('tr');if(r&&r.dataset.studentId)showStudentModal(parseInt(r.dataset.studentId))});
-        document.getElementById('close-modal-btn').addEventListener('click',()=>document.getElementById('student-modal').style.display='none');
-        document.getElementById('student-modal').addEventListener('click',e=>{if(e.target===document.getElementById('student-modal'))document.getElementById('student-modal').style.display='none'});
-        document.getElementById('select-all-checkbox').addEventListener('change',()=> {document.querySelectorAll('#student-table-body .student-checkbox').forEach(c=>c.checked=document.getElementById('select-all-checkbox').checked);updateBulkActionButton()});
-        document.getElementById('bulk-alert-btn').addEventListener('click', async()=>{const sI=Array.from(document.querySelectorAll('.student-checkbox:checked')).map(c=>parseInt(c.dataset.id));const bA=document.getElementById('bulk-alert-btn');bA.disabled=!0;bA.textContent='Sending...';try{const r=await fetch('/send-bulk-alert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({studentIds:sI})});const d=await r.json();if(d.status==='success'){alert(`${d.message}`)}else{throw new Error(d.message)}}catch(e){alert(`Error: ${e.message}`)}finally{bA.disabled=!1;updateBulkActionButton();document.getElementById('select-all-checkbox').checked=!1;document.querySelectorAll('.student-checkbox:checked').forEach(c=>c.checked=!1)}});
+        studentTableBody.addEventListener('click',e=>{if(e.target.type==='checkbox'){e.stopPropagation();updateBulkActionButton();return} const r=e.target.closest('tr');if(r&&r.dataset.studentId)showStudentModal(parseInt(r.dataset.studentId))});
+        closeModalBtn.addEventListener('click',()=>studentModal.style.display='none');
+        studentModal.addEventListener('click',e=>{if(e.target===studentModal)studentModal.style.display='none'});
+        selectAllCheckbox.addEventListener('change',()=> {
+            const isChecked = selectAllCheckbox.checked;
+            filteredStudents.forEach(student => {
+                const checkbox = studentTableBody.querySelector(`.student-checkbox[data-id="${student.student_id}"]`);
+                if(checkbox) checkbox.checked = isChecked;
+            });
+            updateBulkActionButton();
+        });
+        document.getElementById('bulk-alert-btn').addEventListener('click', async()=>{const sI=Array.from(document.querySelectorAll('.student-checkbox:checked')).map(c=>parseInt(c.dataset.id));const bA=document.getElementById('bulk-alert-btn');bA.disabled=!0;bA.textContent='Sending...';try{const r=await fetch('/send-bulk-alert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({studentIds:sI})});const d=await r.json();if(d.status==='success'){alert(`${d.message}`)}else{throw new Error(d.message)}}catch(e){alert(`Error: ${e.message}`)}finally{bA.disabled=!1;updateBulkActionButton();selectAllCheckbox.checked=!1;document.querySelectorAll('.student-checkbox:checked').forEach(c=>c.checked=!1)}});
     </script>
 </body>
 </html>
