@@ -11,10 +11,10 @@ Vidya Dropout is an early-warning system that identifies students at risk of fai
 
 | Name                   | Roll Number  | GitHub Link                           |
 |------------------------|--------------|---------------------------------------|
+| Pratham Sahu           | 2025UCI4185  | [GitHub](https://github.com/prathamsahu31) |
 | Priyanshu Kumar        | 2025UCB6063  | [GitHub](https://github.com/PriyanshuKumar-CSE) |
 | Dwaipayan Dutta        | 2025UCI6640  | [GitHub](https://github.com/Dwaipayan-2007) |
 | Lakshya Mathur         | 2025UCI6597  | [GitHub](https://github.com/imlaksh1121) |
-| Pratham Sahu           | 2025UCI4185  | [GitHub](https://github.com/prathamsahu31) |
 | Khushi Shrivastava     | 2025UEA6566  | [GitHub](https://github.com/KhushiShrivastava-web32) |
 | Salil Khurana          | 2025UCI6607  | [GitHub](https://github.com/salilkhurana396-crypto) |
 
@@ -25,4 +25,4 @@ Vidya Dropout is an early-warning system that identifies students at risk of fai
 - **Video Demonstration:** [Watch Video](https://youtu.be/rVBYSdkDjlg)
 - **Live Deployment:** [View Deployment](https://teamvidya.onrender.com)
 - **Source Code:** [GitHub Repository](https://github.com/prathamsahu31/TeamVidya)
-- **Additional Resources:** [SIH Problem Statement](ANY OTHER RELEVANT LINKS)
+- **Additional Resources:** [SIH Problem Statement](https://github.com/prathamsahu31/TeamVidya/blob/main/SIH%20Problem%20statement%2025102.pdf)
