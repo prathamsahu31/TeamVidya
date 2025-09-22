@@ -21,8 +21,8 @@ Vidya Dropout is an early-warning system that identifies students at risk of fai
 
 ## Project Links
 
-- **SIH Presentation:** [Final SIH Presentation](URL TO PPT UPLOADED TO GITHUB)
-- **Video Demonstration:** [Watch Video](UNLISTED YOUTUBE LINK)
-- **Live Deployment:** [View Deployment](DEPLOYED LINK IF ANY)
-- **Source Code:** [GitHub Repository](GITHUB LINK TO THE REPO)
-- **Additional Resources:** [Other Relevant Links](ANY OTHER RELEVANT LINKS)
+- **SIH Presentation:** [Final SIH Presentation](https://github.com/prathamsahu31/TeamVidya/blob/main/Team%20vidya%20SIH%20Presentation%20Final.pptx)
+- **Video Demonstration:** [Watch Video](https://youtu.be/rVBYSdkDjlg)
+- **Live Deployment:** [View Deployment](https://teamvidya.onrender.com)
+- **Source Code:** [GitHub Repository](https://github.com/prathamsahu31/TeamVidya)
+- **Additional Resources:** [SIH Problem Statement](ANY OTHER RELEVANT LINKS)
